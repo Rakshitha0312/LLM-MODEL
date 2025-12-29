@@ -1,12 +1,14 @@
+import streamlit as st
 from google import genai
 from google.genai import types
-from google.colab import userdata
+import os
 
-# 1. Setup the Client using your Colab Secret
-api_key = userdata.get('GEMINI_API_KEY')
+# Get API key from Streamlit Secrets
+api_key = st.secrets["GEMINI_API_KEY"]
+
+# Create client
 client = genai.Client(api_key=api_key)
 
-# 2. Define the Personality (System Instruction)
 SYSTEM_PROMPT = """
 You are an AI tutor for freshers.
 Explain concepts step-by-step.
@@ -16,7 +18,6 @@ If needed, give a short code example.
 Ask one follow-up question.
 """
 
-# 3. Create the Chat Session with the correct Config
 chat = client.chats.create(
     model="gemini-2.5-flash",
     config=types.GenerateContentConfig(
@@ -24,18 +25,18 @@ chat = client.chats.create(
     )
 )
 
-print("🎓 Gemini Tutor Chat Started! (Type 'exit' to stop)\n")
+st.title("🎓 Gemini AI Tutor")
 
-# 4. The Conversation Loop
-while True:
-    user_input = input("You: ")
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    if user_input.lower() in ["exit", "quit", "stop"]:
-        print("Goodbye! Happy learning!")
-        break
+user_input = st.text_input("You:")
 
-    # Send the message and get the response
+if user_input:
     response = chat.send_message(user_input)
 
-    print(f"\nAI: {response.text}\n")
-    print("-" * 30)
+    st.session_state.messages.append(("You", user_input))
+    st.session_state.messages.append(("AI", response.text))
+
+for role, msg in st.session_state.messages:
+    st.markdown(f"**{role}:** {msg}")
