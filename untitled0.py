@@ -1,45 +1,41 @@
-import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
+from google.colab import userdata
 
-# 1. Page Config
-st.set_page_config(page_title="AI Tutor", page_icon="🎓")
-st.title("🎓 AI Tutor for Freshers")
+# 1. Setup the Client using your Colab Secret
+api_key = userdata.get('GEMINI_API_KEY')
+client = genai.Client(api_key=api_key)
 
-# 2. Get API Key from Streamlit Secrets
-try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-except Exception:
-    st.error("Please set GEMINI_API_KEY in Streamlit Secrets.")
-    st.stop()
+# 2. Define the Personality (System Instruction)
+SYSTEM_PROMPT = """
+You are an AI tutor for freshers.
+Explain concepts step-by-step.
+Use simple language.
+Give real-world examples.
+If needed, give a short code example.
+Ask one follow-up question.
+"""
 
-# 3. System Prompt
-SYSTEM_PROMPT = (
-    "You are an AI tutor for freshers. "
-    "Explain concepts step-by-step using simple language and examples."
+# 3. Create the Chat Session with the correct Config
+chat = client.chats.create(
+    model="gemini-2.5-flash",
+    config=types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT
+    )
 )
 
-# 4. Initialize Gemini Model
-model = genai.GenerativeModel(
-    model_name="gemini-pro",
-    system_instruction=SYSTEM_PROMPT
-)
+print("🎓 Gemini Tutor Chat Started! (Type 'exit' to stop)\n")
 
-# 5. Initialize Chat Memory
-if "chat" not in st.session_state:
-    st.session_state.chat = model.start_chat(history=[])
+# 4. The Conversation Loop
+while True:
+    user_input = input("You: ")
 
-# 6. Display Chat History
-for msg in st.session_state.chat.history:
-    role = "user" if msg.role == "user" else "assistant"
-    with st.chat_message(role):
-        st.markdown(msg.parts[0].text)
+    if user_input.lower() in ["exit", "quit", "stop"]:
+        print("Goodbye! Happy learning!")
+        break
 
-# 7. Chat Input
-if prompt := st.chat_input("Ask me anything about coding..."):
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    # Send the message and get the response
+    response = chat.send_message(user_input)
 
-    response = st.session_state.chat.send_message(prompt)
-
-    with st.chat_message("assistant"):
-        st.markdown(response.text)
+    print(f"\nAI: {response.text}\n")
+    print("-" * 30)
